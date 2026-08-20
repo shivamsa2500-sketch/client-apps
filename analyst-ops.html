@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ops Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================ design tokens ============================ */
+:root{
+  --brand:#0f7c4f;
+  --brand-dark:#0a4f33;
+  --brand-mid:#14915d;
+  --brand-soft:#63c295;
+  --brand-pale:#e7f3ec;
+  --ink:#141915;
+  --ink-2:#4b5750;
+  --ink-3:#8a948e;
+  --line:#e9ecea;
+  --card:#ffffff;
+  --page:#f4f5f4;
+  --shell:#e9eae9;
+  --r-lg:26px;
+  --r-md:18px;
+  --r-sm:12px;
+  --shadow:0 1px 2px rgba(20,25,21,.04), 0 8px 24px rgba(20,25,21,.04);
+  --hatch:repeating-linear-gradient(115deg,#e4e8e5 0 6px,#f3f5f3 6px 12px);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--shell);color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  padding:18px;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#d6dbd8;border-radius:9px}
+::-webkit-scrollbar-track{background:transparent}
+.hide{display:none !important}
+
+/* ================================ shell ================================ */
+.app{
+  display:grid;grid-template-columns:246px 1fr;
+  height:calc(100vh - 36px);background:var(--card);
+  border-radius:var(--r-lg);overflow:hidden;
+  box-shadow:0 20px 60px rgba(20,25,21,.10);
+}
+
+/* ============================== sidebar ================================ */
+.side{display:flex;flex-direction:column;padding:22px 16px;background:var(--card);min-width:0}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 26px}
+.brand-mark{width:32px;height:32px;border-radius:50%;background:var(--brand);display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;flex:none;overflow:hidden}
+.brand-mark img{width:100%;height:100%;object-fit:cover}
+.brand-name{font-weight:700;font-size:19px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-label{font-size:10.5px;font-weight:600;letter-spacing:.12em;color:var(--ink-3);padding:0 10px 10px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav + .nav-label{padding-top:26px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px;border-radius:var(--r-sm);color:var(--ink-2);font-size:14px;font-weight:500;position:relative;transition:background .15s,color .15s}
+.nav-item:hover{background:#f4f6f5;color:var(--ink)}
+.nav-item.on{color:var(--ink);font-weight:600;background:#f2f6f3}
+.nav-item.on::before{content:"";position:absolute;left:-16px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--brand)}
+.nav-item svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nav-item.on svg{stroke:var(--brand)}
+.pill{margin-left:auto;background:var(--brand-pale);color:var(--brand);font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:20px}
+.side-foot{margin-top:auto;padding-top:18px}
+.promo{background:linear-gradient(150deg,#123f2b,#0a2b1d);border-radius:20px;padding:18px;color:#fff;position:relative;overflow:hidden}
+.promo::after{content:"";position:absolute;inset:auto -30px -50px auto;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.05)}
+.promo h4{font-size:14px;font-weight:600;line-height:1.35;margin-bottom:5px}
+.promo p{font-size:11.5px;color:rgba(255,255,255,.6);margin-bottom:14px;line-height:1.4}
+.promo .btn-w{display:block;width:100%;text-align:center;background:var(--brand);color:#fff;border-radius:10px;padding:9px;font-size:12.5px;font-weight:600}
+.promo-icon{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center;margin-bottom:12px;font-size:13px}
+
+/* ================================ main ================================= */
+.main{background:var(--page);padding:14px 16px 22px;overflow-y:auto;min-width:0}
+.topbar{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:var(--r-md);padding:10px 14px;margin-bottom:16px;position:sticky;top:-2px;z-index:20}
+.search{flex:1;display:flex;align-items:center;gap:9px;background:#f4f6f5;border-radius:12px;padding:9px 12px;max-width:420px}
+.search svg{width:16px;height:16px;stroke:var(--ink-3);fill:none;stroke-width:2}
+.search input{border:none;background:none;outline:none;flex:1;font-size:13.5px}
+.search input::placeholder{color:var(--ink-3)}
+.kbd{font-size:10.5px;color:var(--ink-3);background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 6px;font-weight:600}
+.top-actions{display:flex;align-items:center;gap:9px;margin-left:auto}
+.icon-btn{width:38px;height:38px;border-radius:50%;background:#f4f6f5;display:grid;place-items:center;position:relative;transition:background .15s}
+.icon-btn:hover{background:#e9edea}
+.icon-btn svg{width:17px;height:17px;stroke:var(--ink-2);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.dot{position:absolute;top:9px;right:10px;width:7px;height:7px;border-radius:50%;background:#e0574a;border:2px solid #f4f6f5}
+.me{display:flex;align-items:center;gap:10px;padding-left:6px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--brand-pale);color:var(--brand);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.me-name{font-size:13px;font-weight:600;line-height:1.25}
+.me-mail{font-size:11px;color:var(--ink-3)}
+.hamburger{display:none;width:38px;height:38px;border-radius:12px;background:#f4f6f5;place-items:center}
+.hamburger svg{width:18px;height:18px;stroke:var(--ink);stroke-width:2;fill:none;stroke-linecap:round}
+
+/* ============================ page header ============================== */
+.page-head{display:flex;align-items:flex-start;gap:16px;padding:8px 6px 20px;flex-wrap:wrap}
+.page-head h1{font-size:32px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
+.page-head p{font-size:13.5px;color:var(--ink-3);margin-top:6px}
+.head-actions{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:11px 20px;font-size:13.5px;font-weight:600;transition:transform .12s,box-shadow .15s,background .15s;white-space:nowrap}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--brand);color:#fff;box-shadow:0 6px 18px rgba(15,124,79,.25)}
+.btn-primary:hover{background:var(--brand-mid)}
+.btn-ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.btn-ghost:hover{background:#f7f9f8}
+.btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-sm{padding:7px 13px;font-size:12px}
+
+/* =============================== cards ================================= */
+.card{background:var(--card);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow);min-width:0}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.card-head .btn,.card-head .chip-btn{margin-left:auto}
+.chip-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:600;color:var(--ink-2)}
+.chip-btn:hover{background:#f6f8f7}
+
+/* =============================== grids ================================= */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+.kpi{background:var(--card);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi.hero{background:linear-gradient(145deg,#0f7c4f,#0a4f33);color:#fff}
+.kpi-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:26px}
+.kpi-label{font-size:13px;font-weight:500;color:var(--ink-2)}
+.kpi.hero .kpi-label{color:rgba(255,255,255,.85)}
+.kpi-arrow{margin-left:auto;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;flex:none}
+.kpi.hero .kpi-arrow{border-color:rgba(255,255,255,.35)}
+.kpi-arrow svg{width:13px;height:13px;stroke:var(--ink-2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.kpi.hero .kpi-arrow svg{stroke:#fff}
+.kpi-value{font-size:38px;font-weight:700;letter-spacing:-.04em;line-height:1}
+.kpi-foot{display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--ink-3)}
+.kpi.hero .kpi-foot{color:rgba(255,255,255,.7)}
+.trend{display:inline-flex;align-items:center;gap:3px;background:var(--brand-pale);color:var(--brand);border-radius:6px;padding:2px 6px;font-size:10px;font-weight:700}
+.kpi.hero .trend{background:rgba(255,255,255,.16);color:#fff}
+.trend.down{background:#fdeceb;color:#d0554a}
+
+.lower{display:grid;grid-template-columns:1.85fr 1.05fr 1.1fr;gap:14px;align-items:start}
+.a-analytics{grid-column:1;grid-row:1}
+.a-reminder{grid-column:2;grid-row:1}
+.a-rail{grid-column:3;grid-row:1 / span 2;display:flex;flex-direction:column;gap:14px}
+.a-team{grid-column:1;grid-row:2}
+.a-progress{grid-column:2;grid-row:2}
+
+/* ============================= bar chart =============================== */
+.bars{display:flex;align-items:flex-end;gap:10px;height:170px;padding-top:22px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;height:100%;justify-content:flex-end;position:relative}
+.bar{width:100%;max-width:44px;border-radius:999px;background:var(--hatch);transition:height .5s cubic-bezier(.2,.8,.2,1);min-height:14px}
+.bar.f-1{background:var(--brand-soft)}
+.bar.f-2{background:var(--brand)}
+.bar.f-3{background:var(--brand-dark)}
+.bar-x{font-size:11px;color:var(--ink-3);font-weight:500}
+.bar-tip{position:absolute;top:-4px;transform:translateY(-100%);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:2px 7px;font-size:10.5px;font-weight:700;color:var(--brand);box-shadow:var(--shadow);white-space:nowrap}
+
+/* ============================= reminders =============================== */
+.rem-title{font-size:20px;font-weight:700;letter-spacing:-.02em;line-height:1.25;margin-bottom:8px}
+.rem-time{font-size:12.5px;color:var(--ink-3);margin-bottom:18px}
+.rem-empty{font-size:13px;color:var(--ink-3);line-height:1.5;margin-bottom:16px}
+
+/* ============================ project list ============================= */
+.list{display:flex;flex-direction:column;gap:2px;max-height:330px;overflow-y:auto;margin:-6px -6px -6px 0;padding-right:6px}
+.row{display:flex;align-items:center;gap:11px;padding:9px 6px;border-radius:12px;transition:background .15s}
+.row:hover{background:#f7f9f8}
+.row-mark{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none;font-size:12px;font-weight:700;color:#fff}
+.row-body{min-width:0;flex:1}
+.row-title{font-size:12.8px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-sub{font-size:11px;color:var(--ink-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{font-size:10px;font-weight:700;border-radius:6px;padding:3px 8px;white-space:nowrap;flex:none}
+.s-done{background:var(--brand-pale);color:var(--brand)}
+.s-prog{background:#fff4e2;color:#b8792a}
+.s-pend{background:#fdeceb;color:#c9564a}
+.row-x{opacity:0;font-size:15px;color:var(--ink-3);padding:0 4px;flex:none}
+.row:hover .row-x{opacity:1}
+.check{width:19px;height:19px;border-radius:7px;border:1.8px solid #d3dad6;flex:none;display:grid;place-items:center;transition:.15s}
+.check:hover{border-color:var(--brand)}
+.check.on{background:var(--brand);border-color:var(--brand)}
+.check svg{width:11px;height:11px;stroke:#fff;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+.check.on svg{opacity:1}
+.done-text{text-decoration:line-through;color:var(--ink-3)}
+
+/* ============================== progress =============================== */
+.gauge-wrap{display:grid;place-items:center;padding:6px 0 2px}
+.gauge{position:relative;width:190px;height:112px}
+.gauge svg{width:100%;height:100%;overflow:visible}
+.gauge-mid{position:absolute;inset:auto 0 0;text-align:center}
+.gauge-num{font-size:30px;font-weight:700;letter-spacing:-.03em}
+.gauge-cap{font-size:11px;color:var(--ink-3);margin-top:2px}
+.legend{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:16px}
+.legend span{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-2)}
+.swatch{width:9px;height:9px;border-radius:3px;flex:none}
+
+/* ============================ time tracker ============================= */
+.tracker{background:linear-gradient(150deg,#0f7c4f,#08351f);border-radius:var(--r-lg);padding:22px;color:#fff;text-align:center;position:relative;overflow:hidden}
+.tracker::before{content:"";position:absolute;inset:-40% -10% auto auto;width:260px;height:260px;border-radius:50%;border:26px solid rgba(255,255,255,.04)}
+.tracker h3{font-size:14px;font-weight:600;text-align:left;position:relative}
+.clock{font-size:36px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:16px 0 18px;position:relative}
+.t-btns{display:flex;justify-content:center;gap:12px;position:relative}
+.t-btn{width:42px;height:42px;border-radius:50%;background:#fff;display:grid;place-items:center;transition:transform .12s}
+.t-btn:active{transform:scale(.94)}
+.t-btn svg{width:15px;height:15px;fill:var(--ink)}
+.t-btn.stop svg{fill:#e0574a}
+
+/* ============================== modal ================================== */
+.overlay{position:fixed;inset:0;background:rgba(15,20,17,.42);backdrop-filter:blur(3px);display:grid;place-items:center;z-index:120;padding:18px}
+.modal{background:var(--card);border-radius:22px;padding:24px;width:100%;max-width:430px;box-shadow:0 30px 70px rgba(0,0,0,.28);max-height:92vh;overflow-y:auto}
+.modal h3{font-size:18px;font-weight:700;margin-bottom:4px;letter-spacing:-.02em}
+.modal .sub{font-size:12.5px;color:var(--ink-3);margin-bottom:18px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);background:#fbfcfb;border-radius:12px;padding:11px 13px;font-size:13.5px;outline:none;transition:border .15s,box-shadow .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(15,124,79,.10);background:#fff}
+.field textarea{min-height:74px;resize:vertical}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-actions{display:flex;gap:10px;margin-top:20px}
+.modal-actions .btn{flex:1;justify-content:center}
+
+/* =============================== auth ================================== */
+.auth{min-height:calc(100vh - 36px);display:grid;grid-template-columns:1fr 1fr;background:var(--card);border-radius:var(--r-lg);overflow:hidden;box-shadow:0 20px 60px rgba(20,25,21,.10)}
+.auth-art{background:linear-gradient(155deg,#0f7c4f,#062a19);color:#fff;padding:46px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.auth-art::after{content:"";position:absolute;inset:auto -120px -160px auto;width:420px;height:420px;border-radius:50%;border:60px solid rgba(255,255,255,.04)}
+.auth-art h2{font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1.15;margin-top:auto;position:relative}
+.auth-art p{font-size:14px;color:rgba(255,255,255,.68);margin-top:14px;line-height:1.6;position:relative;max-width:330px}
+.auth-points{margin-top:26px;display:flex;flex-direction:column;gap:10px;position:relative}
+.auth-points div{display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,.8)}
+.auth-points i{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;font-style:normal;font-size:11px;flex:none}
+.auth-form{padding:46px;display:flex;flex-direction:column;justify-content:center;max-width:440px;width:100%;margin:0 auto}
+.auth-form h1{font-size:26px;font-weight:700;letter-spacing:-.03em}
+.auth-form .sub{font-size:13.5px;color:var(--ink-3);margin:8px 0 26px}
+.auth-msg{font-size:12.5px;border-radius:12px;padding:11px 13px;margin-bottom:14px;line-height:1.45}
+.auth-msg.err{background:#fdeceb;color:#b8473b}
+.auth-msg.ok{background:var(--brand-pale);color:var(--brand)}
+.auth-switch{font-size:12.5px;color:var(--ink-3);margin-top:18px;text-align:center}
+.auth-switch button{color:var(--brand);font-weight:600}
+.demo-note{margin-top:22px;border-top:1px solid var(--line);padding-top:18px;font-size:11.5px;color:var(--ink-3);line-height:1.55}
+.badge-demo{position:fixed;bottom:14px;right:16px;background:#141915;color:#fff;font-size:11.5px;font-weight:600;padding:8px 16px;border-radius:999px;z-index:90;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+
+/* =============================== views ================================= */
+.view-head{padding:8px 6px 18px}
+.table-card{padding:8px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:0 6px}
+.f-chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.f-chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-h{font-size:10.5px;font-weight:700;color:var(--ink-3);text-align:center;padding:6px 0;letter-spacing:.06em}
+.cal-d{aspect-ratio:1;border-radius:14px;background:#f7f9f8;padding:8px;font-size:12px;font-weight:600;color:var(--ink-2);display:flex;flex-direction:column;gap:4px;min-height:74px}
+.cal-d.out{opacity:.35}
+.cal-d.today{background:var(--brand-pale);color:var(--brand);box-shadow:inset 0 0 0 1.5px var(--brand)}
+.cal-dots{display:flex;gap:3px;flex-wrap:wrap;margin-top:auto}
+.cal-dot{width:6px;height:6px;border-radius:50%;background:var(--brand)}
+.cal-dot.p{background:#e0a44a}
+.empty{text-align:center;padding:44px 20px;color:var(--ink-3);font-size:13px}
+.empty b{display:block;color:var(--ink);font-size:14.5px;margin-bottom:6px;font-weight:600}
+.heat{display:grid;grid-template-columns:repeat(auto-fill,minmax(13px,1fr));gap:4px}
+.heat i{aspect-ratio:1;border-radius:4px;background:#eef1ef;display:block}
+.stat-line{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px}
+.stat-line:last-child{border:none}
+.stat-line b{font-weight:700}
+
+/* ============================= responsive ============================== */
+@media(max-width:1180px){
+  .lower{grid-template-columns:1fr 1fr}
+  .a-analytics{grid-column:1 / span 2;grid-row:1}
+  .a-reminder{grid-column:1;grid-row:2}
+  .a-progress{grid-column:2;grid-row:2}
+  .a-rail{grid-column:1 / span 2;grid-row:3;flex-direction:row}
+  .a-rail > *{flex:1}
+  .a-team{grid-column:1 / span 2;grid-row:4}
+}
+@media(max-width:900px){
+  .kpis{grid-template-columns:1fr 1fr}
+  .auth{grid-template-columns:1fr}
+  .auth-art{display:none}
+}
+@media(max-width:820px){
+  body{padding:0}
+  .app{grid-template-columns:1fr;height:100vh;border-radius:0}
+  .side{position:fixed;inset:0 auto 0 0;width:262px;z-index:100;transform:translateX(-104%);transition:transform .25s ease;box-shadow:0 0 60px rgba(0,0,0,.2)}
+  .side.open{transform:none}
+  .scrim{position:fixed;inset:0;background:rgba(15,20,17,.4);z-index:99}
+  .hamburger{display:grid}
+  .main{padding:10px 12px 26px}
+  .lower{grid-template-columns:1fr}
+  .a-analytics,.a-reminder,.a-progress,.a-team,.a-rail{grid-column:1;grid-row:auto}
+  .a-rail{flex-direction:column}
+  .page-head h1{font-size:26px}
+  .me-name,.me-mail,.kbd{display:none}
+  .topbar{padding:8px 10px}
+}
+@media(max-width:560px){
+  .kpis{grid-template-columns:1fr 1fr;gap:10px}
+  .kpi{padding:15px;border-radius:20px}
+  .kpi-value{font-size:29px}
+  .kpi-top{margin-bottom:14px}
+  .card{padding:16px;border-radius:20px}
+  .head-actions{width:100%}
+  .head-actions .btn{flex:1;justify-content:center}
+  .auth-form{padding:26px 20px}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================ AUTH SCREEN ============================ -->
+<div id="authScreen" class="auth hide">
+  <div class="auth-art">
+    <div style="display:flex;align-items:center;gap:10px;position:relative">
+      <div class="brand-mark" id="authMark">AS</div>
+      <div class="brand-name" style="color:#fff" id="authBrand">Ops Dashboard</div>
+    </div>
+    <h2>Everything you owe the day, in one place.</h2>
+    <p>Plan, prioritise and close out the day's work — and show your client exactly where things stand.</p>
+    <div class="auth-points">
+      <div><i>&#10003;</i> Private workspace per client</div>
+      <div><i>&#10003;</i> Daily tasks, projects and progress</div>
+      <div><i>&#10003;</i> One-click summary to send over WhatsApp or email</div>
+    </div>
+  </div>
+  <div class="auth-form">
+    <h1 id="authTitle">Sign in</h1>
+    <p class="sub" id="authSub">Use the email and password you were given.</p>
+    <div id="authMsg" class="auth-msg hide"></div>
+    <form id="authForm">
+      <div class="field"><label>Email</label><input type="email" id="authEmail" autocomplete="email" placeholder="you@company.com" required></div>
+      <div class="field"><label>Password</label><input type="password" id="authPass" autocomplete="current-password" placeholder="••••••••" minlength="6" required></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" id="authBtn" type="submit">Sign in</button>
+    </form>
+    <div class="auth-switch">
+      <span id="authSwitchText">First time here?</span>
+      <button type="button" id="authSwitch">Create an account</button>
+    </div>
+    <div class="auth-switch" style="margin-top:8px">
+      <button type="button" id="authForgot" style="color:var(--ink-3);font-weight:500">Forgot password?</button>
+    </div>
+    <div class="demo-note" id="demoNote">
+      <b>Not connected yet.</b> Add your Supabase URL and anon key in the CONFIG block at the top of this file to switch on real logins.
+      <button id="demoEnter" style="color:var(--brand);font-weight:600;margin-top:8px;display:block">Open the demo dashboard &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== APP SHELL =========================== -->
+<div id="appShell" class="app hide">
+
+  <aside class="side" id="side">
+    <div class="brand">
+      <div class="brand-mark" id="sideMark">AS</div>
+      <div class="brand-name" id="sideName">Ops Dashboard</div>
+    </div>
+
+    <div class="nav-label">MENU</div>
+    <nav class="nav">
+      <a class="nav-item on" data-view="dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Dashboard</a>
+      <a class="nav-item" data-view="tasks"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Tasks<span class="pill" id="navTaskCount">0</span></a>
+      <a class="nav-item" data-view="calendar"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Calendar</a>
+      <a class="nav-item" data-view="analytics"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Analytics</a>
+      <a class="nav-item" data-view="team"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg>Team</a>
+    </nav>
+
+    <div class="nav-label">GENERAL</div>
+    <nav class="nav">
+      <a class="nav-item" data-view="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-2.9 1.17V21a2 2 0 11-4 0v-.09A1.65 1.65 0 006.87 19.4l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6h.09A1.65 1.65 0 0010 3.09V3a2 2 0 114 0v.09A1.65 1.65 0 0015 4.6a1.65 1.65 0 001.82.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9v.09A1.65 1.65 0 0021 10.6H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</a>
+      <a class="nav-item" data-view="help"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>Help</a>
+      <a class="nav-item" id="logoutBtn"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>Log out</a>
+    </nav>
+
+    <div class="side-foot">
+      <div class="promo">
+        <div class="promo-icon">&#9889;</div>
+        <h4 id="promoTitle">Daily summary</h4>
+        <p id="promoText">Copy today's status as text and send it straight to your client.</p>
+        <button class="btn-w" id="copySummary">Copy summary</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="topbar">
+      <button class="hamburger" id="hamburger"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <div class="search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="searchInput" placeholder="Search tasks and projects">
+        <span class="kbd">/</span>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="btnReminders" title="Reminders"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg></button>
+        <button class="icon-btn" id="btnBell" title="Pending today"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span class="dot" id="bellDot"></span></button>
+        <div class="me">
+          <div class="avatar" id="meAvatar">--</div>
+          <div><div class="me-name" id="meName">&nbsp;</div><div class="me-mail" id="meMail">&nbsp;</div></div>
+        </div>
+      </div>
+    </div>
+    <div id="viewRoot"></div>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+<div id="demoBadge" class="badge-demo hide">Demo data — not connected to Supabase</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+/* ===========================================================================
+   CONFIG — the only block you edit per client.
+   Leave supabaseUrl / supabaseAnonKey empty to run in demo mode.
+   =========================================================================== */
+const CONFIG = {
+  supabaseUrl:     'https://fmafxglvbgaoqnanpxmu.supabase.co',
+  supabaseAnonKey: 'sb_publishable_cVDJ_vkj5FmnJFP_HOirNA_wHRGdCRt',   // publishable key — safe in the browser, RLS does the protecting
+
+  productName:  'Analyst Ops',
+  brandName:    'Analyst Solution',
+  logoUrl:      '',                       // optional image URL for the badge
+  brandColor:   '#0f7c4f',
+  allowSignUp:  true,                     // false = invite-only, you create users in Supabase
+  ownerCredit:  'Built by Analyst Solution',
+  categories:   ['Client Work','Internal','Sales','Content','Admin','Follow-up'],
+  tone:         'coach'                   // coach | neutral
+};
+
+/* =============================== helpers ================================= */
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => 'id-' + Math.random().toString(36).slice(2, 10);
+const iso = d => new Date(d).toISOString().slice(0,10);
+const TODAY = () => iso(new Date());
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const initials = s => (s||'?').trim().split(/[\s@._-]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+const DAYS = ['S','M','T','W','T','F','S'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const prettyDate = d => { const x = new Date(d+'T00:00:00'); return MONTHS[x.getMonth()].slice(0,3)+' '+x.getDate()+', '+x.getFullYear(); };
+const PALETTE = ['#0f7c4f','#3b6ee0','#e0a44a','#8b5cf6','#e0574a','#0ea5a5','#d946a0','#5a8f3d'];
+const hhmmss = s => [Math.floor(s/3600), Math.floor(s%3600/60), Math.floor(s%60)].map(n=>String(n).padStart(2,'0')).join(':');
+
+/* ================================ state ================================== */
+const S = {
+  user:null, role:'owner', ws:null, workspaces:[],
+  tasks:[], projects:[], reminders:[], members:[],
+  view:'dashboard', search:'', filter:'all', demo:false,
+  timer:{ running:false, seconds:0, startedAt:null, handle:null, label:'' }
+};
+
+let sb = null;
+const liveMode = () => !!(CONFIG.supabaseUrl && CONFIG.supabaseAnonKey && sb);
+
+/* ============================== demo data ================================ */
+function buildDemo(){
+  const cats = CONFIG.categories;
+  const projects = [
+    { id:'p1', name:'Client onboarding — Nova Digital', status:'running', color:PALETTE[0], due_date:iso(addDays(new Date(),6)) },
+    { id:'p2', name:'Monthly reporting pack',           status:'running', color:PALETTE[1], due_date:iso(addDays(new Date(),12)) },
+    { id:'p3', name:'Furnace logsheet digitisation',    status:'running', color:PALETTE[2], due_date:iso(addDays(new Date(),18)) },
+    { id:'p4', name:'Website conversion pass',          status:'pending', color:PALETTE[3], due_date:iso(addDays(new Date(),24)) },
+    { id:'p5', name:'Ad creative batch — Q3',           status:'ended',   color:PALETTE[4], due_date:iso(addDays(new Date(),-3)) }
+  ];
+  const titles = [
+    'Send kickoff summary','Review ad performance','Draft weekly client report','Fix data sync on logsheet',
+    'Approve creative batch','Call vendor about pricing','Update pricing sheet','Prepare invoice',
+    'Reply to support thread','Publish blog post','Clean product data export','Book supplier meeting',
+    'Record walkthrough video','QA the dashboard build','Reconcile last month numbers'
+  ];
+  const tasks = [];
+  for (let d = 29; d >= 0; d--){
+    const day = iso(addDays(new Date(), -d));
+    const n = d === 0 ? 6 : 3 + Math.floor(Math.random()*4);
+    for (let i = 0; i < n; i++){
+      const done = d === 0 ? Math.random() < .5 : Math.random() < .78;
+      tasks.push({
+        id: uid(), title: titles[Math.floor(Math.random()*titles.length)],
+        category: cats[Math.floor(Math.random()*cats.length)],
+        project_id: projects[Math.floor(Math.random()*4)].id,
+        status: done ? 'done' : (Math.random() < .4 ? 'in_progress' : 'pending'),
+        priority: Math.random() < .2 ? 'high' : 'normal',
+        task_date: day, due_date: day,
+        assignee_id: 'u'+(1+Math.floor(Math.random()*4)),
+        completed_at: done ? day : null
+      });
+    }
+  }
+  const now = new Date(); now.setHours(14,0,0,0);
+  return {
+    projects, tasks,
+    reminders:[{ id:'r1', title:'Review call with Nova Digital', starts_at: now.toISOString(), ends_at: new Date(now.getTime()+2*3600e3).toISOString() }],
+    members:[
+      { user_id:'u1', display_name:'Shivam Aggarwal', role:'owner'  },
+      { user_id:'u2', display_name:'Priya Nair',      role:'client' },
+      { user_id:'u3', display_name:'Rahul Mehta',     role:'client' },
+      { user_id:'u4', display_name:'Ananya Rao',      role:'client' }
+    ]
+  };
+}
+
+/* ================================ store ================================== */
+const Store = {
+  async loadAll(){
+    if (!liveMode()){
+      const d = buildDemo();
+      S.ws = { id:'demo', name: CONFIG.brandName, brand_color: CONFIG.brandColor, logo_url: CONFIG.logoUrl, tone: CONFIG.tone };
+      S.workspaces = [S.ws]; S.role = 'owner';
+      Object.assign(S, d);
+      return;
+    }
+    const { data: ws, error } = await sb.rpc('my_workspaces');
+    if (error) throw error;
+    S.workspaces = ws || [];
+    if (!S.workspaces.length){ S.ws = null; return; }
+    const saved = localStorage.getItem('ops.ws');
+    S.ws = S.workspaces.find(w => w.id === saved) || S.workspaces[0];
+    S.role = S.ws.role || 'client';
+    localStorage.setItem('ops.ws', S.ws.id);
+    const from = iso(addDays(new Date(), -60));
+    const [p, t, r, m] = await Promise.all([
+      sb.from('projects').select('*').eq('workspace_id', S.ws.id).order('position'),
+      sb.from('tasks').select('*').eq('workspace_id', S.ws.id).gte('task_date', from).order('created_at'),
+      sb.from('reminders').select('*').eq('workspace_id', S.ws.id).gte('starts_at', new Date(Date.now()-864e5).toISOString()).order('starts_at'),
+      sb.from('workspace_members').select('*').eq('workspace_id', S.ws.id)
+    ]);
+    S.projects  = p.data || [];
+    S.tasks     = t.data || [];
+    S.reminders = r.data || [];
+    S.members   = m.data || [];
+  },
+
+  async addTask(t){
+    const row = { title:t.title, category:t.category, project_id:t.project_id||null, status:t.status||'pending',
+                  priority:t.priority||'normal', task_date:t.task_date||TODAY(), due_date:t.due_date||null, notes:t.notes||null };
+    if (!liveMode()){ S.tasks.push({ ...row, id:uid(), assignee_id:'u1', completed_at:null }); return; }
+    const { data, error } = await sb.from('tasks')
+      .insert({ ...row, workspace_id:S.ws.id, created_by:S.user.id, assignee_id:t.assignee_id||S.user.id })
+      .select().single();
+    if (error) throw error;
+    S.tasks.push(data);
+  },
+
+  async updateTask(id, patch){
+    const t = S.tasks.find(x=>x.id===id); if (t) Object.assign(t, patch);
+    if (!liveMode()) return;
+    const { error } = await sb.from('tasks').update(patch).eq('id', id);
+    if (error) { toast(error.message); }
+  },
+
+  async deleteTask(id){
+    S.tasks = S.tasks.filter(x=>x.id!==id);
+    if (!liveMode()) return;
+    const { error } = await sb.from('tasks').delete().eq('id', id);
+    if (error) toast(error.message);
+  },
+
+  async addProject(p){
+    const row = { name:p.name, status:p.status||'running', color:p.color||PALETTE[S.projects.length%PALETTE.length], due_date:p.due_date||null, position:S.projects.length };
+    if (!liveMode()){ S.projects.push({ ...row, id:uid() }); return; }
+    const { data, error } = await sb.from('projects').insert({ ...row, workspace_id:S.ws.id }).select().single();
+    if (error) throw error;
+    S.projects.push(data);
+  },
+
+  async deleteProject(id){
+    S.projects = S.projects.filter(p=>p.id!==id);
+    if (!liveMode()) return;
+    await sb.from('projects').delete().eq('id', id);
+  },
+
+  async addReminder(r){
+    if (!liveMode()){ S.reminders.push({ ...r, id:uid() }); S.reminders.sort((a,b)=>a.starts_at.localeCompare(b.starts_at)); return; }
+    const { data, error } = await sb.from('reminders').insert({ ...r, workspace_id:S.ws.id }).select().single();
+    if (error) throw error;
+    S.reminders.push(data); S.reminders.sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
+  },
+
+  async saveTime(seconds, label){
+    if (!liveMode() || seconds < 5) return;
+    await sb.from('time_entries').insert({ workspace_id:S.ws.id, user_id:S.user.id, seconds, label:label||'Focus session' });
+  },
+
+  async createWorkspace(name){
+    const { data, error } = await sb.from('workspaces')
+      .insert({ name, brand_color:CONFIG.brandColor, created_by:S.user.id }).select().single();
+    if (error) throw error;
+    localStorage.setItem('ops.ws', data.id);
+    return data;
+  }
+};
+
+/* ============================== derived data ============================= */
+const isDone = t => t.status === 'done';
+const dayTasks = d => S.tasks.filter(t => t.task_date === d);
+function stats(){
+  const today = dayTasks(TODAY());
+  const all = S.tasks;
+  return {
+    total: all.length,
+    done: all.filter(isDone).length,
+    progress: all.filter(t=>t.status==='in_progress').length,
+    pending: all.filter(t=>t.status==='pending').length,
+    todayTotal: today.length,
+    todayDone: today.filter(isDone).length,
+    pct: all.length ? Math.round(all.filter(isDone).length / all.length * 100) : 0
+  };
+}
+function weekSeries(){
+  const out = [];
+  const now = new Date(); const start = addDays(now, -now.getDay());
+  for (let i = 0; i < 7; i++){
+    const d = iso(addDays(start, i));
+    const list = dayTasks(d);
+    const done = list.filter(isDone).length;
+    out.push({ day:DAYS[i], date:d, total:list.length, done, pct: list.length ? Math.round(done/list.length*100) : 0, future: d > TODAY() });
+  }
+  return out;
+}
+function streak(){
+  let n = 0;
+  for (let i = 0; i < 60; i++){
+    const d = iso(addDays(new Date(), -i));
+    const list = dayTasks(d);
+    if (!list.length){ if (i===0) continue; break; }
+    if (list.every(isDone)) n++; else break;
+  }
+  return n;
+}
+</script>
+<script>
+/* ============================== UI bits ================================== */
+function projById(id){ return S.projects.find(p=>p.id===id); }
+function memberName(id){ const m = S.members.find(x=>x.user_id===id); return m ? (m.display_name || 'Member') : 'Unassigned'; }
+function statusChip(s){
+  if (s==='done') return '<span class="status s-done">Completed</span>';
+  if (s==='in_progress') return '<span class="status s-prog">In Progress</span>';
+  return '<span class="status s-pend">Pending</span>';
+}
+const CHECK_SVG = '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
+
+function taskRow(t, showDate){
+  const p = projById(t.project_id);
+  const sub = [ p ? p.name : t.category, showDate ? prettyDate(t.task_date) : '' ].filter(Boolean).join(' &middot; ');
+  return `<div class="row" data-task="${t.id}">
+    <button class="check ${isDone(t)?'on':''}" data-toggle="${t.id}">${CHECK_SVG}</button>
+    <div class="row-body">
+      <div class="row-title ${isDone(t)?'done-text':''}">${esc(t.title)}</div>
+      <div class="row-sub">${sub}</div>
+    </div>
+    ${statusChip(t.status)}
+    ${S.role==='owner' ? `<button class="row-x" data-del="${t.id}" title="Delete">&times;</button>` : ''}
+  </div>`;
+}
+
+/* ============================= DASHBOARD ================================= */
+function viewDashboard(){
+  const st = stats(), wk = weekSeries();
+  const maxT = Math.max(1, ...wk.map(w=>w.total));
+  const best = wk.reduce((a,b)=> b.total && b.pct >= a.pct ? b : a, {pct:-1});
+  const rem = S.reminders.find(r => new Date(r.ends_at || r.starts_at) > new Date());
+  const openProjects = S.projects.filter(p=>p.status!=='ended');
+  const todayList = dayTasks(TODAY());
+
+  const bars = wk.map(w=>{
+    const h = w.total ? Math.max(16, Math.round(w.total / maxT * 100)) : 14;
+    const cls = (!w.total || w.future) ? '' : w.pct >= 90 ? 'f-3' : w.pct >= 50 ? 'f-2' : 'f-1';
+    const tip = (w.date === best.date && w.total) ? `<div class="bar-tip">${w.pct}%</div>` : '';
+    return `<div class="bar-col" title="${w.done}/${w.total} done">${tip}<div class="bar ${cls}" style="height:${h}%"></div><div class="bar-x">${w.day}</div></div>`;
+  }).join('');
+
+  const L = 251.33, fd = st.total ? st.done/st.total : 0, fp = st.total ? st.progress/st.total : 0;
+
+  return `
+  <div class="page-head">
+    <div>
+      <h1>Dashboard</h1>
+      <p>${greeting()}</p>
+    </div>
+    <div class="head-actions">
+      ${S.role==='owner' ? `<button class="btn btn-primary" data-modal="task"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add Task</button>` : ''}
+      ${S.role==='owner' ? `<button class="btn btn-ghost" data-modal="project">Add Project</button>` : ''}
+      <button class="btn btn-ghost" id="copySummary2">Copy summary</button>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi hero">
+      <div class="kpi-top"><div class="kpi-label">Total Tasks</div><div class="kpi-arrow"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></div></div>
+      <div class="kpi-value">${st.total}</div>
+      <div class="kpi-foot"><span class="trend">${st.pct}%</span> completed overall</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top"><div class="kpi-label">Completed</div><div class="kpi-arrow"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></div></div>
+      <div class="kpi-value">${st.done}</div>
+      <div class="kpi-foot"><span class="trend">${streak()}d</span> clean-sheet streak</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top"><div class="kpi-label">In Progress</div><div class="kpi-arrow"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></div></div>
+      <div class="kpi-value">${st.progress}</div>
+      <div class="kpi-foot">Being worked on now</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top"><div class="kpi-label">Pending</div><div class="kpi-arrow"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></div></div>
+      <div class="kpi-value">${st.pending}</div>
+      <div class="kpi-foot">${st.todayTotal - st.todayDone} of them due today</div>
+    </div>
+  </div>
+
+  <div class="lower">
+    <section class="card a-analytics">
+      <div class="card-head"><div class="card-title">Weekly Analytics</div>
+        <button class="chip-btn" data-view-jump="analytics">View all</button></div>
+      <div class="bars">${bars}</div>
+    </section>
+
+    <section class="card a-reminder">
+      <div class="card-head"><div class="card-title">Reminders</div>
+        ${S.role==='owner' ? '<button class="chip-btn" data-modal="reminder">+ New</button>' : ''}</div>
+      ${ rem ? `
+        <div class="rem-title">${esc(rem.title)}</div>
+        <div class="rem-time">${fmtTimeRange(rem)}</div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" data-open-rem="${rem.id}">
+          <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Start</button>`
+      : `<div class="rem-empty">Nothing scheduled. ${S.role==='owner'?'Add a meeting or a deadline so it shows up here.':'Your account manager will add meetings here.'}</div>
+         ${S.role==='owner'?'<button class="btn btn-ghost" style="width:100%;justify-content:center" data-modal="reminder">Add a reminder</button>':''}` }
+    </section>
+
+    <div class="a-rail">
+      <section class="card">
+        <div class="card-head"><div class="card-title">Projects</div>
+          ${S.role==='owner' ? '<button class="chip-btn" data-modal="project">+ New</button>' : ''}</div>
+        <div class="list">
+          ${ openProjects.length ? openProjects.map(p=>{
+              const t = S.tasks.filter(x=>x.project_id===p.id);
+              const d = t.filter(isDone).length;
+              return `<div class="row">
+                <div class="row-mark" style="background:${p.color}">${initials(p.name)}</div>
+                <div class="row-body">
+                  <div class="row-title">${esc(p.name)}</div>
+                  <div class="row-sub">${p.due_date ? 'Due '+prettyDate(p.due_date) : 'No due date'} &middot; ${d}/${t.length} done</div>
+                </div>
+                ${S.role==='owner' ? `<button class="row-x" data-delproj="${p.id}">&times;</button>` : ''}
+              </div>`;
+            }).join('') : '<div class="empty"><b>No projects yet</b>Group your tasks under a project to track progress.</div>' }
+        </div>
+      </section>
+
+      <section class="tracker">
+        <h3>Time Tracker</h3>
+        <div class="clock" id="clock">${hhmmss(S.timer.seconds)}</div>
+        <div class="t-btns">
+          <button class="t-btn" id="tToggle">${S.timer.running
+            ? '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>'
+            : '<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg>'}</button>
+          <button class="t-btn stop" id="tStop"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
+        </div>
+      </section>
+    </div>
+
+    <section class="card a-team">
+      <div class="card-head"><div class="card-title">Today's Work</div>
+        <button class="chip-btn" data-view-jump="tasks">All tasks</button></div>
+      <div class="list">
+        ${ todayList.length ? todayList.slice(0,6).map(t=>taskRow(t,false)).join('')
+          : `<div class="empty"><b>Nothing logged for today</b>${S.role==='owner'?'Add the three things that actually have to happen.':'No tasks assigned for today.'}</div>` }
+      </div>
+    </section>
+
+    <section class="card a-progress">
+      <div class="card-head"><div class="card-title">Progress</div></div>
+      <div class="gauge-wrap">
+        <div class="gauge">
+          <svg viewBox="0 0 200 118">
+            <path d="M20 105 A80 80 0 0 1 180 105" fill="none" stroke="#eceeed" stroke-width="20" stroke-linecap="round"/>
+            <path d="M20 105 A80 80 0 0 1 180 105" fill="none" stroke="#63c295" stroke-width="20" stroke-linecap="round"
+                  stroke-dasharray="${((fd+fp)*L).toFixed(1)} ${L}"/>
+            <path d="M20 105 A80 80 0 0 1 180 105" fill="none" stroke="#0a4f33" stroke-width="20" stroke-linecap="round"
+                  stroke-dasharray="${(fd*L).toFixed(1)} ${L}"/>
+          </svg>
+          <div class="gauge-mid"><div class="gauge-num">${st.pct}%</div><div class="gauge-cap">Tasks closed</div></div>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i class="swatch" style="background:#0a4f33"></i>Completed ${st.done}</span>
+        <span><i class="swatch" style="background:#63c295"></i>In progress ${st.progress}</span>
+        <span><i class="swatch" style="background:#eceeed"></i>Pending ${st.pending}</span>
+      </div>
+    </section>
+  </div>`;
+}
+
+function fmtTimeRange(r){
+  const f = d => new Date(d).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  const day = new Date(r.starts_at).toDateString() === new Date().toDateString() ? 'Today' : prettyDate(iso(new Date(r.starts_at)));
+  return day + ' &middot; ' + f(r.starts_at) + (r.ends_at ? ' – ' + f(r.ends_at) : '');
+}
+function greeting(){
+  const st = stats();
+  const name = (S.user && (S.user.user_metadata?.name || S.user.email.split('@')[0])) || 'there';
+  if (CONFIG.tone === 'neutral') return `${st.todayDone} of ${st.todayTotal} tasks closed today.`;
+  if (!st.todayTotal) return `Nothing on the board for today yet, ${name}. Add what matters.`;
+  if (st.todayDone === st.todayTotal) return `Everything for today is closed. Clean sheet, ${name}.`;
+  return `${st.todayTotal - st.todayDone} left today. Plan, prioritise and finish with ease.`;
+}
+
+/* =============================== TASKS =================================== */
+function viewTasks(){
+  const q = S.search.toLowerCase();
+  let list = S.tasks.filter(t => !q || t.title.toLowerCase().includes(q) || (t.category||'').toLowerCase().includes(q));
+  if (S.filter === 'today')   list = list.filter(t => t.task_date === TODAY());
+  if (S.filter === 'pending') list = list.filter(t => t.status === 'pending');
+  if (S.filter === 'prog')    list = list.filter(t => t.status === 'in_progress');
+  if (S.filter === 'done')    list = list.filter(t => isDone(t));
+  const groups = {};
+  list.slice().sort((a,b)=> b.task_date.localeCompare(a.task_date)).forEach(t => (groups[t.task_date] ||= []).push(t));
+  const chips = [['all','All'],['today','Today'],['pending','Pending'],['prog','In progress'],['done','Completed']]
+    .map(([k,l]) => `<button class="f-chip ${S.filter===k?'on':''}" data-filter="${k}">${l}</button>`).join('');
+
+  return `
+  <div class="page-head">
+    <div><h1>Tasks</h1><p>${list.length} task${list.length===1?'':'s'} in view</p></div>
+    <div class="head-actions">
+      ${S.role==='owner' ? `<button class="btn btn-primary" data-modal="task"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add Task</button>` : ''}
+    </div>
+  </div>
+  <div class="filters">${chips}</div>
+  ${ Object.keys(groups).length ? Object.entries(groups).map(([d, ts]) => `
+    <section class="card" style="margin-bottom:14px">
+      <div class="card-head">
+        <div class="card-title">${d===TODAY()?'Today':prettyDate(d)}</div>
+        <span class="status s-done" style="margin-left:auto">${ts.filter(isDone).length}/${ts.length}</span>
+      </div>
+      <div class="list" style="max-height:none">${ts.map(t=>taskRow(t,false)).join('')}</div>
+    </section>`).join('')
+   : `<section class="card"><div class="empty"><b>Nothing here</b>Try a different filter, or add a task.</div></section>` }`;
+}
+
+/* ============================== CALENDAR ================================= */
+function viewCalendar(){
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+  const first = new Date(y, m, 1), start = addDays(first, -first.getDay());
+  let cells = '';
+  for (let i = 0; i < 42; i++){
+    const d = addDays(start, i), key = iso(d);
+    const list = dayTasks(key);
+    const dots = list.slice(0,6).map(t => `<i class="cal-dot ${isDone(t)?'':'p'}"></i>`).join('');
+    cells += `<div class="cal-d ${d.getMonth()!==m?'out':''} ${key===TODAY()?'today':''}">
+      <span>${d.getDate()}</span><div class="cal-dots">${dots}</div></div>`;
+  }
+  return `
+  <div class="page-head"><div><h1>Calendar</h1><p>${MONTHS[m]} ${y} — green means closed, amber still open</p></div></div>
+  <section class="card">
+    <div class="cal">${DAYS.map(d=>`<div class="cal-h">${d}</div>`).join('')}${cells}</div>
+  </section>`;
+}
+
+/* ============================== ANALYTICS ================================ */
+function viewAnalytics(){
+  const st = stats();
+  const cats = {};
+  S.tasks.forEach(t => { const c = t.category || 'General'; (cats[c] ||= {n:0,d:0}); cats[c].n++; if (isDone(t)) cats[c].d++; });
+  const catMax = Math.max(1, ...Object.values(cats).map(c=>c.n));
+  const heat = [];
+  for (let i = 41; i >= 0; i--){
+    const d = iso(addDays(new Date(), -i)); const list = dayTasks(d);
+    const pct = list.length ? list.filter(isDone).length / list.length : -1;
+    const bg = pct < 0 ? '#eef1ef' : pct === 0 ? '#dfe6e2' : pct < .5 ? '#b7e0c9' : pct < .9 ? '#63c295' : '#0f7c4f';
+    heat.push(`<i style="background:${bg}" title="${prettyDate(d)}: ${list.filter(isDone).length}/${list.length}"></i>`);
+  }
+  return `
+  <div class="page-head"><div><h1>Analytics</h1><p>Last 42 days of activity</p></div></div>
+  <div class="lower" style="grid-template-columns:1.6fr 1fr">
+    <section class="card" style="grid-column:1;grid-row:1">
+      <div class="card-head"><div class="card-title">Consistency</div></div>
+      <div class="heat">${heat.join('')}</div>
+      <div class="legend" style="justify-content:flex-start;margin-top:14px">
+        <span><i class="swatch" style="background:#eef1ef"></i>No tasks</span>
+        <span><i class="swatch" style="background:#b7e0c9"></i>Partly done</span>
+        <span><i class="swatch" style="background:#0f7c4f"></i>All closed</span>
+      </div>
+    </section>
+    <section class="card" style="grid-column:2;grid-row:1">
+      <div class="card-head"><div class="card-title">Headline numbers</div></div>
+      <div class="stat-line"><span>Completion rate</span><b>${st.pct}%</b></div>
+      <div class="stat-line"><span>Clean-sheet streak</span><b>${streak()} days</b></div>
+      <div class="stat-line"><span>Open right now</span><b>${st.pending + st.progress}</b></div>
+      <div class="stat-line"><span>Active projects</span><b>${S.projects.filter(p=>p.status!=='ended').length}</b></div>
+    </section>
+    <section class="card" style="grid-column:1 / span 2;grid-row:2">
+      <div class="card-head"><div class="card-title">By category</div></div>
+      ${Object.entries(cats).sort((a,b)=>b[1].n-a[1].n).map(([c,v])=>`
+        <div style="margin-bottom:13px">
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px">
+            <span style="font-weight:600">${esc(c)}</span><span style="color:var(--ink-3)">${v.d}/${v.n} done</span></div>
+          <div style="height:9px;border-radius:9px;background:#eef1ef;overflow:hidden">
+            <div style="height:100%;width:${Math.round(v.n/catMax*100)}%;background:linear-gradient(90deg,#63c295,#0f7c4f);border-radius:9px"></div></div>
+        </div>`).join('') || '<div class="empty">No data yet.</div>'}
+    </section>
+  </div>`;
+}
+
+/* ================================ TEAM =================================== */
+function viewTeam(){
+  return `
+  <div class="page-head">
+    <div><h1>Team</h1><p>Everyone with access to this workspace</p></div>
+    ${S.role==='owner' ? '<div class="head-actions"><button class="btn btn-ghost" data-modal="invite">How to add a member</button></div>' : ''}
+  </div>
+  <section class="card">
+    <div class="list" style="max-height:none">
+      ${S.members.map(m=>{
+        const mine = S.tasks.filter(t=>t.assignee_id===m.user_id);
+        const open = mine.filter(t=>!isDone(t)).length;
+        return `<div class="row">
+          <div class="avatar" style="width:34px;height:34px;font-size:12px">${initials(m.display_name||'Member')}</div>
+          <div class="row-body">
+            <div class="row-title">${esc(m.display_name||'Member')}</div>
+            <div class="row-sub">${mine.length} tasks &middot; ${open} open</div>
+          </div>
+          <span class="status ${m.role==='owner'?'s-done':'s-prog'}">${m.role==='owner'?'Owner':'Client'}</span>
+        </div>`; }).join('') || '<div class="empty"><b>Just you so far</b>Add a client user in Supabase, then add them to this workspace.</div>'}
+    </div>
+  </section>`;
+}
+
+/* ============================== SETTINGS ================================= */
+function viewSettings(){
+  const connected = liveMode();
+  return `
+  <div class="page-head"><div><h1>Settings</h1><p>Workspace and access</p></div></div>
+  <div class="lower" style="grid-template-columns:1fr 1fr">
+    <section class="card" style="grid-column:1;grid-row:1">
+      <div class="card-head"><div class="card-title">Workspace</div></div>
+      <div class="stat-line"><span>Name</span><b>${esc(S.ws?.name || CONFIG.brandName)}</b></div>
+      <div class="stat-line"><span>Your role</span><b>${S.role === 'owner' ? 'Owner (full access)' : 'Client (view + tick off)'}</b></div>
+      <div class="stat-line"><span>Signed in as</span><b>${esc(S.user?.email || 'demo user')}</b></div>
+      <div class="stat-line"><span>Backend</span><b style="color:${connected?'var(--brand)':'#c9564a'}">${connected?'Supabase — live':'Demo mode'}</b></div>
+      ${S.workspaces.length > 1 ? `<div class="field" style="margin-top:16px"><label>Switch workspace</label>
+        <select id="wsSwitch">${S.workspaces.map(w=>`<option value="${w.id}" ${w.id===S.ws.id?'selected':''}>${esc(w.name)}</option>`).join('')}</select></div>` : ''}
+    </section>
+    <section class="card" style="grid-column:2;grid-row:1">
+      <div class="card-head"><div class="card-title">Data</div></div>
+      <p style="font-size:12.5px;color:var(--ink-3);line-height:1.6;margin-bottom:16px">
+        Export everything in this workspace as JSON, or copy a plain-text status summary to paste into email or WhatsApp.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" id="exportJson">Export JSON</button>
+        <button class="btn btn-ghost btn-sm" id="copySummary3">Copy summary</button>
+        <button class="btn btn-ghost btn-sm" onclick="window.print()">Print / PDF</button>
+      </div>
+    </section>
+    <section class="card" style="grid-column:1 / span 2;grid-row:2">
+      <div class="card-head"><div class="card-title">Client access</div></div>
+      <p style="font-size:13px;color:var(--ink-2);line-height:1.7">
+        Each client user signs in with their own email and password. Row-level security in Supabase means a user can only
+        ever read rows belonging to a workspace they are a member of — there is no client-side filtering to bypass.
+        Owners can create, edit and delete; clients can view and tick tasks off.
+        To add someone: <b>Supabase → Authentication → Add user</b>, then insert a row in <code>workspace_members</code>
+        with their user id, this workspace id and role <code>client</code>.
+      </p>
+    </section>
+  </div>`;
+}
+
+/* ================================ HELP =================================== */
+function viewHelp(){
+  return `
+  <div class="page-head"><div><h1>Help</h1><p>How this dashboard is meant to be used</p></div></div>
+  <section class="card">
+    <div class="stat-line"><span><b>Add the day's work each morning</b><br><span style="color:var(--ink-3);font-size:12px">Three to six real items beats a list of twenty.</span></span></div>
+    <div class="stat-line"><span><b>Tick things off as you close them</b><br><span style="color:var(--ink-3);font-size:12px">The gauge and the weekly bars are driven by this.</span></span></div>
+    <div class="stat-line"><span><b>Send the summary at end of day</b><br><span style="color:var(--ink-3);font-size:12px">"Copy summary" gives you a clean text block for the client.</span></span></div>
+    <div class="stat-line"><span><b>Projects group related tasks</b><br><span style="color:var(--ink-3);font-size:12px">Use them for anything running longer than a day.</span></span></div>
+    <p style="font-size:12px;color:var(--ink-3);margin-top:18px">${esc(CONFIG.ownerCredit)}</p>
+  </section>`;
+}
+
+const VIEWS = { dashboard:viewDashboard, tasks:viewTasks, calendar:viewCalendar, analytics:viewAnalytics, team:viewTeam, settings:viewSettings, help:viewHelp };
+
+function render(){
+  $('#viewRoot').innerHTML = (VIEWS[S.view] || viewDashboard)();
+  $$('.nav-item').forEach(n => n.classList.toggle('on', n.dataset.view === S.view));
+  $('#navTaskCount').textContent = S.tasks.filter(t=>!isDone(t)).length;
+  $('#bellDot').classList.toggle('hide', !dayTasks(TODAY()).some(t=>!isDone(t)));
+  window.scrollTo(0,0);
+}
+</script>
+<script>
+/* =============================== toast =================================== */
+let toastTimer;
+function toast(msg){
+  let el = $('#toast');
+  if (!el){ el = document.createElement('div'); el.id='toast'; el.className='badge-demo'; document.body.appendChild(el); }
+  el.textContent = msg; el.classList.remove('hide'); el.style.bottom='58px'; el.style.right='16px';
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=> el.classList.add('hide'), 2600);
+}
+
+/* =============================== modals ================================== */
+function closeModal(){ $('#modalRoot').innerHTML = ''; }
+function openModal(html){
+  $('#modalRoot').innerHTML = `<div class="overlay" data-overlay><div class="modal">${html}</div></div>`;
+  const first = $('#modalRoot input, #modalRoot select'); if (first) first.focus();
+}
+const catOptions = sel => CONFIG.categories.map(c=>`<option ${c===sel?'selected':''}>${esc(c)}</option>`).join('');
+const projOptions = () => '<option value="">No project</option>' + S.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+
+const MODALS = {
+  task: () => `
+    <h3>Add a task</h3><p class="sub">It lands on the date you choose.</p>
+    <form id="mTask">
+      <div class="field"><label>What needs doing</label><input name="title" required placeholder="Send the weekly report"></div>
+      <div class="row-2">
+        <div class="field"><label>Category</label><select name="category">${catOptions()}</select></div>
+        <div class="field"><label>Date</label><input type="date" name="task_date" value="${TODAY()}"></div>
+      </div>
+      <div class="row-2">
+        <div class="field"><label>Project</label><select name="project_id">${projOptions()}</select></div>
+        <div class="field"><label>Priority</label><select name="priority"><option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option></select></div>
+      </div>
+      <div class="field"><label>Notes (optional)</label><textarea name="notes" placeholder="Context, links, what done looks like"></textarea></div>
+      <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button><button class="btn btn-primary">Add task</button></div>
+    </form>`,
+  project: () => `
+    <h3>Add a project</h3><p class="sub">Anything that runs longer than a day.</p>
+    <form id="mProject">
+      <div class="field"><label>Project name</label><input name="name" required placeholder="Client onboarding — Acme"></div>
+      <div class="row-2">
+        <div class="field"><label>Status</label><select name="status"><option value="running">Running</option><option value="pending">Pending</option><option value="ended">Ended</option></select></div>
+        <div class="field"><label>Due date</label><input type="date" name="due_date"></div>
+      </div>
+      <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button><button class="btn btn-primary">Add project</button></div>
+    </form>`,
+  reminder: () => `
+    <h3>Add a reminder</h3><p class="sub">Meetings, calls and hard deadlines.</p>
+    <form id="mReminder">
+      <div class="field"><label>Title</label><input name="title" required placeholder="Review call with Acme"></div>
+      <div class="row-2">
+        <div class="field"><label>Starts</label><input type="datetime-local" name="starts_at" required></div>
+        <div class="field"><label>Ends</label><input type="datetime-local" name="ends_at"></div>
+      </div>
+      <div class="field"><label>Meeting link (optional)</label><input name="link" placeholder="https://meet.google.com/..."></div>
+      <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button><button class="btn btn-primary">Add reminder</button></div>
+    </form>`,
+  invite: () => `
+    <h3>Give a client access</h3><p class="sub">Three steps, all inside Supabase.</p>
+    <div style="font-size:13px;line-height:1.75;color:var(--ink-2)">
+      <b>1.</b> Authentication &rarr; Users &rarr; <b>Add user</b>. Set their email and a password, tick auto-confirm.<br>
+      <b>2.</b> Copy the new user's UID.<br>
+      <b>3.</b> SQL editor, run:<br>
+      <code style="display:block;background:#f4f6f5;border-radius:10px;padding:11px;margin-top:8px;font-size:11.5px;white-space:pre-wrap">insert into workspace_members
+  (workspace_id, user_id, role, display_name)
+values ('${S.ws?.id || 'WORKSPACE_ID'}', 'USER_UID', 'client', 'Their Name');</code>
+      <p style="margin-top:12px;color:var(--ink-3);font-size:12px">Role <b>client</b> = read plus ticking tasks off. Role <b>owner</b> = full edit.</p>
+    </div>
+    <div class="modal-actions"><button type="button" class="btn btn-primary" data-close>Got it</button></div>`,
+  workspace: () => `
+    <h3>Name your workspace</h3><p class="sub">One workspace per client. You can add more later.</p>
+    <form id="mWorkspace">
+      <div class="field"><label>Workspace name</label><input name="name" required placeholder="${esc(CONFIG.brandName)}"></div>
+      <div class="modal-actions"><button class="btn btn-primary" style="width:100%">Create workspace</button></div>
+    </form>`
+};
+
+/* ============================== summary ================================== */
+function summaryText(){
+  const d = TODAY(), list = dayTasks(d);
+  const done = list.filter(isDone), open = list.filter(t=>!isDone(t));
+  const L = [];
+  L.push(`${S.ws?.name || CONFIG.brandName} — status for ${prettyDate(d)}`);
+  L.push('');
+  L.push(`Closed (${done.length}):`);
+  done.forEach(t => L.push('  ✓ ' + t.title));
+  if (!done.length) L.push('  —');
+  L.push('');
+  L.push(`Still open (${open.length}):`);
+  open.forEach(t => L.push('  • ' + t.title + (t.status==='in_progress' ? ' (in progress)' : '')));
+  if (!open.length) L.push('  — nothing outstanding');
+  const active = S.projects.filter(p=>p.status==='running');
+  if (active.length){
+    L.push(''); L.push('Projects running:');
+    active.forEach(p => { const t = S.tasks.filter(x=>x.project_id===p.id); L.push(`  • ${p.name} — ${t.filter(isDone).length}/${t.length} done`); });
+  }
+  L.push(''); L.push(CONFIG.ownerCredit);
+  return L.join('\n');
+}
+async function copySummary(){
+  const txt = summaryText();
+  try { await navigator.clipboard.writeText(txt); toast('Summary copied'); }
+  catch { openModal(`<h3>Today's summary</h3><p class="sub">Select and copy.</p>
+    <textarea style="width:100%;min-height:230px;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:12.5px">${esc(txt)}</textarea>
+    <div class="modal-actions"><button class="btn btn-primary" data-close style="width:100%">Close</button></div>`); }
+}
+
+/* =============================== timer =================================== */
+function tick(){ S.timer.seconds++; const c = $('#clock'); if (c) c.textContent = hhmmss(S.timer.seconds); }
+function toggleTimer(){
+  S.timer.running = !S.timer.running;
+  if (S.timer.running){ S.timer.handle = setInterval(tick, 1000); }
+  else clearInterval(S.timer.handle);
+  if (S.view === 'dashboard') render();
+}
+async function stopTimer(){
+  clearInterval(S.timer.handle);
+  const s = S.timer.seconds;
+  if (s > 4){ await Store.saveTime(s, 'Focus session'); toast('Logged ' + hhmmss(s)); }
+  S.timer = { running:false, seconds:0, startedAt:null, handle:null, label:'' };
+  if (S.view === 'dashboard') render();
+}
+
+/* ============================ global events ============================== */
+document.addEventListener('click', async e => {
+  const t = e.target;
+  const nav = t.closest('.nav-item[data-view]');
+  if (nav){ S.view = nav.dataset.view; $('#side').classList.remove('open'); $('.scrim')?.remove(); render(); return; }
+  const jump = t.closest('[data-view-jump]');
+  if (jump){ S.view = jump.dataset.viewJump; render(); return; }
+  if (t.closest('#logoutBtn')) return signOut();
+  if (t.closest('#hamburger')){
+    $('#side').classList.add('open');
+    const sc = document.createElement('div'); sc.className = 'scrim';
+    sc.onclick = () => { $('#side').classList.remove('open'); sc.remove(); };
+    document.body.appendChild(sc); return;
+  }
+  const m = t.closest('[data-modal]'); if (m){ openModal(MODALS[m.dataset.modal]()); return; }
+  if (t.closest('[data-close]') || t.hasAttribute('data-overlay')) return closeModal();
+
+  const chk = t.closest('[data-toggle]');
+  if (chk){
+    const id = chk.dataset.toggle, task = S.tasks.find(x=>x.id===id);
+    const next = isDone(task) ? 'pending' : 'done';
+    await Store.updateTask(id, { status: next, completed_at: next==='done' ? new Date().toISOString() : null });
+    render(); return;
+  }
+  const del = t.closest('[data-del]');
+  if (del){ await Store.deleteTask(del.dataset.del); render(); return; }
+  const dp = t.closest('[data-delproj]');
+  if (dp){ await Store.deleteProject(dp.dataset.delproj); render(); return; }
+  const rem = t.closest('[data-open-rem]');
+  if (rem){ const r = S.reminders.find(x=>x.id===rem.dataset.openRem); if (r?.link) window.open(r.link,'_blank'); else toast('No meeting link on this reminder'); return; }
+
+  const f = t.closest('[data-filter]'); if (f){ S.filter = f.dataset.filter; render(); return; }
+  if (t.closest('#copySummary') || t.closest('#copySummary2') || t.closest('#copySummary3')) return copySummary();
+  if (t.closest('#tToggle')) return toggleTimer();
+  if (t.closest('#tStop'))   return stopTimer();
+  if (t.closest('#exportJson')){
+    const blob = new Blob([JSON.stringify({ workspace:S.ws, projects:S.projects, tasks:S.tasks, reminders:S.reminders }, null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = (S.ws?.name || 'workspace').replace(/\W+/g,'-').toLowerCase() + '-export.json'; a.click(); return;
+  }
+});
+
+document.addEventListener('submit', async e => {
+  const form = e.target; e.preventDefault();
+  const d = Object.fromEntries(new FormData(form).entries());
+  try{
+    if (form.id === 'mTask'){ await Store.addTask(d); closeModal(); render(); toast('Task added'); }
+    if (form.id === 'mProject'){ await Store.addProject({ ...d, due_date: d.due_date || null }); closeModal(); render(); toast('Project added'); }
+    if (form.id === 'mReminder'){
+      await Store.addReminder({ title:d.title, starts_at:new Date(d.starts_at).toISOString(),
+        ends_at: d.ends_at ? new Date(d.ends_at).toISOString() : null, link: d.link || null });
+      closeModal(); render(); toast('Reminder added');
+    }
+    if (form.id === 'mWorkspace'){ await Store.createWorkspace(d.name); closeModal(); await boot(); }
+    if (form.id === 'authForm') await handleAuth();
+  } catch(err){ toast(err.message || 'Something went wrong'); }
+});
+
+document.addEventListener('input', e => {
+  if (e.target.id === 'searchInput'){
+    S.search = e.target.value;
+    if (S.search && S.view !== 'tasks'){ S.view = 'tasks'; render(); $('#searchInput').focus(); }
+    else if (S.view === 'tasks') { const v = $('#viewRoot'); v.innerHTML = viewTasks(); }
+  }
+});
+document.addEventListener('change', async e => {
+  if (e.target.id === 'wsSwitch'){ localStorage.setItem('ops.ws', e.target.value); await boot(); }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA'){
+    e.preventDefault(); $('#searchInput')?.focus();
+  }
+});
+
+/* ================================ auth =================================== */
+let authMode = 'signin';
+function showAuth(msg, kind){
+  $('#appShell').classList.add('hide');
+  $('#authScreen').classList.remove('hide');
+  $('#demoBadge').classList.add('hide');
+  $('#demoNote').classList.toggle('hide', liveMode());
+  if (msg){ const el = $('#authMsg'); el.className = 'auth-msg ' + (kind || 'err'); el.textContent = msg; el.classList.remove('hide'); }
+  else $('#authMsg').classList.add('hide');
+}
+function setAuthMode(mode){
+  authMode = mode;
+  $('#authTitle').textContent = mode === 'signin' ? 'Sign in' : 'Create your account';
+  $('#authSub').textContent   = mode === 'signin' ? 'Use the email and password you were given.' : 'You will be the owner of your first workspace.';
+  $('#authBtn').textContent   = mode === 'signin' ? 'Sign in' : 'Create account';
+  $('#authSwitchText').textContent = mode === 'signin' ? 'First time here?' : 'Already have a login?';
+  $('#authSwitch').textContent = mode === 'signin' ? 'Create an account' : 'Sign in';
+  $('#authMsg').classList.add('hide');
+}
+async function handleAuth(){
+  const email = $('#authEmail').value.trim(), password = $('#authPass').value;
+  const btn = $('#authBtn'); btn.disabled = true; btn.textContent = 'Please wait…';
+  try{
+    if (!liveMode()){ enterDemo(); return; }
+    const fn = authMode === 'signin' ? sb.auth.signInWithPassword({ email, password }) : sb.auth.signUp({ email, password });
+    const { data, error } = await fn;
+    if (error) throw error;
+    if (authMode === 'signup' && !data.session){ showAuth('Check your inbox to confirm the address, then sign in.', 'ok'); return; }
+    await boot();
+  } catch(err){ showAuth(err.message || 'Could not sign in'); }
+  finally { btn.disabled = false; setAuthMode(authMode); }
+}
+async function signOut(){
+  if (liveMode()) await sb.auth.signOut();
+  S.user = null; S.demo = false;
+  location.reload();
+}
+function enterDemo(){
+  S.demo = true;
+  S.user = { id:'u1', email:'you@'+CONFIG.brandName.toLowerCase().replace(/\W+/g,'')+'.com', user_metadata:{ name:'Shivam Aggarwal' } };
+  boot();
+}
+
+/* ================================ boot =================================== */
+function applyBrand(){
+  const c = CONFIG.brandColor;
+  document.documentElement.style.setProperty('--brand', c);
+  const mark = CONFIG.logoUrl ? `<img src="${CONFIG.logoUrl}" alt="">` : initials(CONFIG.brandName);
+  $('#sideMark').innerHTML = mark; $('#authMark').innerHTML = mark;
+  $('#sideName').textContent = CONFIG.productName;
+  $('#authBrand').textContent = CONFIG.productName;
+  document.title = CONFIG.productName + ' — ' + CONFIG.brandName;
+}
+async function boot(){
+  try{
+    await Store.loadAll();
+    if (liveMode() && !S.ws){ $('#authScreen').classList.add('hide'); $('#appShell').classList.remove('hide'); openModal(MODALS.workspace()); return; }
+    $('#authScreen').classList.add('hide');
+    $('#appShell').classList.remove('hide');
+    $('#demoBadge').classList.toggle('hide', liveMode());
+    const name = S.user?.user_metadata?.name || S.user?.email?.split('@')[0] || 'User';
+    $('#meName').textContent = name;
+    $('#meMail').textContent = S.user?.email || '';
+    $('#meAvatar').textContent = initials(name);
+    render();
+  } catch(err){ showAuth(err.message || 'Could not load your workspace'); }
+}
+
+(async function init(){
+  applyBrand();
+  setAuthMode('signin');
+  $('#authSwitch').onclick = () => setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
+  $('#authSwitch').parentElement.classList.toggle('hide', !CONFIG.allowSignUp);
+  $('#demoEnter').onclick = enterDemo;
+  $('#authForgot').onclick = async () => {
+    if (!liveMode()) return toast('Demo mode — nothing to reset');
+    const email = $('#authEmail').value.trim();
+    if (!email) return showAuth('Type your email above first');
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.href });
+    showAuth(error ? error.message : 'Reset link sent. Check your inbox.', error ? 'err' : 'ok');
+  };
+  if (CONFIG.supabaseUrl && CONFIG.supabaseAnonKey && window.supabase){
+    sb = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
+    const { data } = await sb.auth.getSession();
+    if (data.session){ S.user = data.session.user; return boot(); }
+  }
+  showAuth();
+})();
+</script>
+</body>
+</html>
