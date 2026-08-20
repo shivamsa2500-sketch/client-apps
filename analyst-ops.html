@@ -321,7 +321,7 @@ a{color:inherit;text-decoration:none}
     <p class="sub" id="authSub">Use the email and password you were given.</p>
     <div id="authMsg" class="auth-msg hide"></div>
     <form id="authForm">
-      <div class="field"><label>Email</label><input type="email" id="authEmail" autocomplete="email" placeholder="you@company.com" required></div>
+      <div class="field" id="authEmailField"><label>Email</label><input type="email" id="authEmail" autocomplete="email" placeholder="you@company.com" required></div>
       <div class="field"><label>Password</label><input type="password" id="authPass" autocomplete="current-password" placeholder="••••••••" minlength="6" required></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center" id="authBtn" type="submit">Sign in</button>
     </form>
@@ -383,7 +383,7 @@ a{color:inherit;text-decoration:none}
         <span class="kbd">/</span>
       </div>
       <div class="top-actions">
-        <button class="icon-btn" id="btnReminders" title="Reminders"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg></button>
+        <button class="icon-btn" id="btnMail" title="Compose email"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg></button>
         <button class="icon-btn" id="btnBell" title="Pending today"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span class="dot" id="bellDot"></span></button>
         <div class="me">
           <div class="avatar" id="meAvatar">--</div>
@@ -412,7 +412,9 @@ const CONFIG = {
   brandName:    'Analyst Solution',
   logoUrl:      '',                       // optional image URL for the badge
   brandColor:   '#0f7c4f',
-  allowSignUp:  true,                     // false = invite-only, you create users in Supabase
+  allowSignUp:  false,                    // false = invite-only; you add client users from the Team tab
+  mailWebhook:  '',                       // optional n8n webhook URL — enables real one-click sending
+  defaultRecipient: '',                   // optional fallback "To" address for the compose box
   ownerCredit:  'Built by Analyst Solution',
   categories:   ['Client Work','Internal','Sales','Content','Admin','Follow-up'],
   tone:         'coach'                   // coach | neutral
@@ -574,10 +576,25 @@ const Store = {
   },
 
   async createWorkspace(name){
-    const { data, error } = await sb.from('workspaces')
-      .insert({ name, brand_color:CONFIG.brandColor, created_by:S.user.id }).select().single();
+    // Must go through the RPC. A plain insert...select() fails RLS: the SELECT policy
+    // needs a membership row that only exists after the insert's trigger has fired.
+    const { data, error } = await sb.rpc('create_workspace', {
+      p_name: name, p_brand: CONFIG.brandColor, p_logo: CONFIG.logoUrl || null, p_tone: CONFIG.tone
+    });
     if (error) throw error;
     localStorage.setItem('ops.ws', data.id);
+    return data;
+  },
+
+  async addMember(email, role, name){
+    if (!liveMode()){
+      S.members.push({ user_id:uid(), display_name:name || email.split('@')[0], email, role });
+      return 'ok';
+    }
+    const { data, error } = await sb.rpc('add_member', {
+      p_ws: S.ws.id, p_email: email, p_role: role, p_name: name || null
+    });
+    if (error) throw error;
     return data;
   }
 };
@@ -672,7 +689,8 @@ function viewDashboard(){
     <div class="head-actions">
       ${S.role==='owner' ? `<button class="btn btn-primary" data-modal="task"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add Task</button>` : ''}
       ${S.role==='owner' ? `<button class="btn btn-ghost" data-modal="project">Add Project</button>` : ''}
-      <button class="btn btn-ghost" id="copySummary2">Copy summary</button>
+      <button class="btn btn-ghost" id="composeBtn"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>Email summary</button>
+      <button class="btn btn-ghost" id="copySummary2">Copy</button>
     </div>
   </div>
 
@@ -897,7 +915,7 @@ function viewTeam(){
   return `
   <div class="page-head">
     <div><h1>Team</h1><p>Everyone with access to this workspace</p></div>
-    ${S.role==='owner' ? '<div class="head-actions"><button class="btn btn-ghost" data-modal="invite">How to add a member</button></div>' : ''}
+    ${S.role==='owner' ? '<div class="head-actions"><button class="btn btn-primary" data-modal="member"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add client</button><button class="btn btn-ghost" data-modal="legacyInvite">Do it in Supabase</button></div>' : ''}
   </div>
   <section class="card">
     <div class="list" style="max-height:none">
@@ -928,8 +946,9 @@ function viewSettings(){
       <div class="stat-line"><span>Your role</span><b>${S.role === 'owner' ? 'Owner (full access)' : 'Client (view + tick off)'}</b></div>
       <div class="stat-line"><span>Signed in as</span><b>${esc(S.user?.email || 'demo user')}</b></div>
       <div class="stat-line"><span>Backend</span><b style="color:${connected?'var(--brand)':'#c9564a'}">${connected?'Supabase — live':'Demo mode'}</b></div>
-      ${S.workspaces.length > 1 ? `<div class="field" style="margin-top:16px"><label>Switch workspace</label>
+      ${connected && S.workspaces.length > 1 ? `<div class="field" style="margin-top:16px"><label>Switch workspace</label>
         <select id="wsSwitch">${S.workspaces.map(w=>`<option value="${w.id}" ${w.id===S.ws.id?'selected':''}>${esc(w.name)}</option>`).join('')}</select></div>` : ''}
+      ${connected ? `<button class="btn btn-ghost btn-sm" style="margin-top:16px" data-modal="newWorkspace">+ New workspace</button>` : ''}
     </section>
     <section class="card" style="grid-column:2;grid-row:1">
       <div class="card-head"><div class="card-title">Data</div></div>
@@ -989,14 +1008,15 @@ function toast(msg){
 
 /* =============================== modals ================================== */
 function closeModal(){ $('#modalRoot').innerHTML = ''; }
-function openModal(html){
-  $('#modalRoot').innerHTML = `<div class="overlay" data-overlay><div class="modal">${html}</div></div>`;
+function openModal(html, locked){
+  $('#modalRoot').innerHTML = `<div class="overlay" ${locked ? '' : 'data-overlay'}><div class="modal">${html}</div></div>`;
   const first = $('#modalRoot input, #modalRoot select'); if (first) first.focus();
 }
 const catOptions = sel => CONFIG.categories.map(c=>`<option ${c===sel?'selected':''}>${esc(c)}</option>`).join('');
 const projOptions = () => '<option value="">No project</option>' + S.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
 
 const MODALS = {
+  newWorkspace: () => MODALS.workspace(),
   task: () => `
     <h3>Add a task</h3><p class="sub">It lands on the date you choose.</p>
     <form id="mTask">
@@ -1033,7 +1053,41 @@ const MODALS = {
       <div class="field"><label>Meeting link (optional)</label><input name="link" placeholder="https://meet.google.com/..."></div>
       <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button><button class="btn btn-primary">Add reminder</button></div>
     </form>`,
-  invite: () => `
+  member: () => `
+    <h3>Give a client access</h3><p class="sub">They need a Supabase login first — Authentication &rarr; Users &rarr; Add user (tick auto-confirm). Then add them here by that email.</p>
+    <form id="mMember">
+      <div class="field"><label>Their email</label><input name="email" type="email" required placeholder="client@company.com"></div>
+      <div class="row-2">
+        <div class="field"><label>Display name</label><input name="name" placeholder="Priya Nair"></div>
+        <div class="field"><label>Access</label><select name="role">
+          <option value="client">Client — view + tick off</option>
+          <option value="owner">Owner — full edit</option></select></div>
+      </div>
+      <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button><button class="btn btn-primary">Add to workspace</button></div>
+    </form>`,
+  compose: () => {
+    const rcpt = S.members.filter(m => m.email && m.user_id !== S.user?.id);
+    const st = stats();
+    const subject = `${S.ws?.name || CONFIG.brandName} — status for ${prettyDate(TODAY())} (${st.todayDone}/${st.todayTotal} closed)`;
+    return `
+    <h3>Compose email</h3><p class="sub">Prefilled with today's status. Nothing leaves this page until you pick how to send.</p>
+    <form id="mCompose">
+      <div class="field"><label>To</label>
+        <input name="to" list="rcptList" required placeholder="client@company.com" value="${esc(rcpt[0]?.email || CONFIG.defaultRecipient || '')}">
+        <datalist id="rcptList">${rcpt.map(m => `<option value="${esc(m.email)}">${esc(m.display_name || '')}</option>`).join('')}</datalist>
+      </div>
+      <div class="field"><label>Subject</label><input name="subject" value="${esc(subject)}"></div>
+      <div class="field"><label>Message</label><textarea name="body" style="min-height:200px">${esc(summaryText())}</textarea></div>
+      <div class="modal-actions" style="flex-wrap:wrap">
+        <button type="button" class="btn btn-ghost btn-sm" data-close>Cancel</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="composeCopy">Copy</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="composeMailto">Mail app</button>
+        <button type="button" class="btn btn-primary btn-sm" id="composeGmail">Open in Gmail</button>
+      </div>
+      ${CONFIG.mailWebhook ? '<button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px">Send now via webhook</button>' : '<p style="font-size:11.5px;color:var(--ink-3);margin-top:12px;line-height:1.5">Set <code>mailWebhook</code> in CONFIG to send in one click through your n8n instance instead of opening a draft.</p>'}
+    </form>`;
+  },
+  legacyInvite: () => `
     <h3>Give a client access</h3><p class="sub">Three steps, all inside Supabase.</p>
     <div style="font-size:13px;line-height:1.75;color:var(--ink-2)">
       <b>1.</b> Authentication &rarr; Users &rarr; <b>Add user</b>. Set their email and a password, tick auto-confirm.<br>
@@ -1046,10 +1100,10 @@ values ('${S.ws?.id || 'WORKSPACE_ID'}', 'USER_UID', 'client', 'Their Name');</c
     </div>
     <div class="modal-actions"><button type="button" class="btn btn-primary" data-close>Got it</button></div>`,
   workspace: () => `
-    <h3>Name your workspace</h3><p class="sub">One workspace per client. You can add more later.</p>
+    <h3>Name your workspace</h3><p class="sub">One workspace per client. Nothing can be saved until this exists — you can add more later from Settings.</p>
     <form id="mWorkspace">
       <div class="field"><label>Workspace name</label><input name="name" required placeholder="${esc(CONFIG.brandName)}"></div>
-      <div class="modal-actions"><button class="btn btn-primary" style="width:100%">Create workspace</button></div>
+      <div class="modal-actions"><button class="btn btn-primary" style="width:100%;justify-content:center">Create workspace</button></div>
     </form>`
 };
 
@@ -1132,6 +1186,20 @@ document.addEventListener('click', async e => {
 
   const f = t.closest('[data-filter]'); if (f){ S.filter = f.dataset.filter; render(); return; }
   if (t.closest('#copySummary') || t.closest('#copySummary2') || t.closest('#copySummary3')) return copySummary();
+  if (t.closest('#btnMail') || t.closest('#composeBtn')) return openModal(MODALS.compose());
+  if (t.closest('#composeCopy') || t.closest('#composeMailto') || t.closest('#composeGmail')){
+    const f = $('#mCompose'); const d = Object.fromEntries(new FormData(f).entries());
+    if (!d.to){ toast('Add a recipient first'); return; }
+    if (t.closest('#composeCopy')){
+      navigator.clipboard.writeText(d.body).then(()=>toast('Message copied'), ()=>toast('Could not copy'));
+      return;
+    }
+    const url = t.closest('#composeGmail')
+      ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(d.to)}&su=${encodeURIComponent(d.subject||'')}&body=${encodeURIComponent(d.body||'')}`
+      : `mailto:${encodeURIComponent(d.to)}?subject=${encodeURIComponent(d.subject||'')}&body=${encodeURIComponent(d.body||'')}`;
+    window.open(url, '_blank');
+    return;
+  }
   if (t.closest('#tToggle')) return toggleTimer();
   if (t.closest('#tStop'))   return stopTimer();
   if (t.closest('#exportJson')){
@@ -1153,6 +1221,25 @@ document.addEventListener('submit', async e => {
       closeModal(); render(); toast('Reminder added');
     }
     if (form.id === 'mWorkspace'){ await Store.createWorkspace(d.name); closeModal(); await boot(); }
+    if (form.id === 'mMember'){
+      const res = await Store.addMember(d.email.trim(), d.role, d.name);
+      if (res === 'no_user'){
+        toast('No Supabase user with that email yet — create them in Authentication first');
+      } else {
+        closeModal(); await boot();
+        toast(d.email + ' can now sign in to this workspace');
+      }
+    }
+    if (form.id === 'mCompose'){
+      if (!CONFIG.mailWebhook) return;
+      const btn = form.querySelector('button[type=submit]'); if (btn){ btn.disabled = true; btn.textContent = 'Sending…'; }
+      const r = await fetch(CONFIG.mailWebhook, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ to:d.to, subject:d.subject, body:d.body,
+          workspace:S.ws?.name, workspace_id:S.ws?.id, sent_by:S.user?.email, date:TODAY() })
+      });
+      if (r.ok){ closeModal(); toast('Sent'); } else { toast('Webhook returned ' + r.status); if (btn){ btn.disabled=false; btn.textContent='Send now via webhook'; } }
+    }
     if (form.id === 'authForm') await handleAuth();
   } catch(err){ toast(err.message || 'Something went wrong'); }
 });
@@ -1184,27 +1271,58 @@ function showAuth(msg, kind){
   if (msg){ const el = $('#authMsg'); el.className = 'auth-msg ' + (kind || 'err'); el.textContent = msg; el.classList.remove('hide'); }
   else $('#authMsg').classList.add('hide');
 }
+const AUTH_COPY = {
+  signin: ['Sign in', 'Use the email and password you were given.', 'Sign in'],
+  signup: ['Create your account', 'You will be the owner of your first workspace.', 'Create account'],
+  reset:  ['Set a new password', 'Choose a new password for your account. At least 6 characters.', 'Save new password']
+};
 function setAuthMode(mode){
   authMode = mode;
-  $('#authTitle').textContent = mode === 'signin' ? 'Sign in' : 'Create your account';
-  $('#authSub').textContent   = mode === 'signin' ? 'Use the email and password you were given.' : 'You will be the owner of your first workspace.';
-  $('#authBtn').textContent   = mode === 'signin' ? 'Sign in' : 'Create account';
+  const [title, sub, btn] = AUTH_COPY[mode] || AUTH_COPY.signin;
+  $('#authTitle').textContent = title;
+  $('#authSub').textContent = sub;
+  $('#authBtn').textContent = btn;
+  const isReset = mode === 'reset';
+  $('#authEmailField').classList.toggle('hide', isReset);
+  $('#authEmail').required = !isReset;
+  $('#authPass').placeholder = isReset ? 'New password' : '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
+  $('#authPass').autocomplete = isReset ? 'new-password' : 'current-password';
+  $('#authSwitch').parentElement.classList.toggle('hide', isReset || !CONFIG.allowSignUp);
+  $('#authForgot').parentElement.classList.toggle('hide', isReset);
   $('#authSwitchText').textContent = mode === 'signin' ? 'First time here?' : 'Already have a login?';
   $('#authSwitch').textContent = mode === 'signin' ? 'Create an account' : 'Sign in';
-  $('#authMsg').classList.add('hide');
+  if (!isReset) $('#authMsg').classList.add('hide');
 }
 async function handleAuth(){
   const email = $('#authEmail').value.trim(), password = $('#authPass').value;
   const btn = $('#authBtn'); btn.disabled = true; btn.textContent = 'Please wait…';
   try{
     if (!liveMode()){ enterDemo(); return; }
+    if (authMode === 'reset'){
+      const { error } = await sb.auth.updateUser({ password });
+      if (error) throw error;
+      setAuthMode('signin');
+      history.replaceState(null, '', location.pathname + location.search);
+      await boot();
+      toast('Password updated');
+      return;
+    }
     const fn = authMode === 'signin' ? sb.auth.signInWithPassword({ email, password }) : sb.auth.signUp({ email, password });
     const { data, error } = await fn;
     if (error) throw error;
-    if (authMode === 'signup' && !data.session){ showAuth('Check your inbox to confirm the address, then sign in.', 'ok'); return; }
+    if (authMode === 'signup' && !data.session){ showAuth('Account created. Confirm the address from your inbox, then sign in.', 'ok'); return; }
     await boot();
-  } catch(err){ showAuth(err.message || 'Could not sign in'); }
+  } catch(err){ showAuth(friendlyAuthError(err)); }
   finally { btn.disabled = false; setAuthMode(authMode); }
+}
+function friendlyAuthError(err){
+  const m = (err && err.message || '').toLowerCase();
+  if (m.includes('email not confirmed')) return 'That account exists but the email is not confirmed yet. Open the confirmation link sent to that address, then sign in.';
+  if (m.includes('invalid login credentials')) return 'Email or password is wrong. If you have never set a password here, use "Forgot password?".';
+  if (m.includes('signups not allowed') || m.includes('signup is disabled')) return 'Sign-up is closed on this dashboard. Ask your account manager to create the login for you.';
+  if (m.includes('rate limit') || m.includes('too many')) return 'Too many attempts. Wait a minute and try again.';
+  if (m.includes('should be at least')) return 'Password is too short — use at least 6 characters.';
+  return err && err.message || 'Could not sign in';
 }
 async function signOut(){
   if (liveMode()) await sb.auth.signOut();
@@ -1230,7 +1348,12 @@ function applyBrand(){
 async function boot(){
   try{
     await Store.loadAll();
-    if (liveMode() && !S.ws){ $('#authScreen').classList.add('hide'); $('#appShell').classList.remove('hide'); openModal(MODALS.workspace()); return; }
+    if (liveMode() && !S.ws){
+      $('#authScreen').classList.add('hide'); $('#appShell').classList.remove('hide');
+      $('#viewRoot').innerHTML = '<div class="page-head"><div><h1>Almost there</h1><p>Name your workspace to start saving data.</p></div></div>';
+      openModal(MODALS.workspace(), true);
+      return;
+    }
     $('#authScreen').classList.add('hide');
     $('#appShell').classList.remove('hide');
     $('#demoBadge').classList.toggle('hide', liveMode());
@@ -1256,8 +1379,18 @@ async function boot(){
     showAuth(error ? error.message : 'Reset link sent. Check your inbox.', error ? 'err' : 'ok');
   };
   if (CONFIG.supabaseUrl && CONFIG.supabaseAnonKey && window.supabase){
+    const recovery = /type=recovery/.test(location.hash) || /type=recovery/.test(location.search);
     sb = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
+    sb.auth.onAuthStateChange(ev => {
+      if (ev === 'PASSWORD_RECOVERY'){ showAuth(); setAuthMode('reset'); }
+    });
     const { data } = await sb.auth.getSession();
+    if (recovery && data.session){
+      S.user = data.session.user;
+      showAuth('Recovery link accepted — set a new password to finish.', 'ok');
+      setAuthMode('reset');
+      return;
+    }
     if (data.session){ S.user = data.session.user; return boot(); }
   }
   showAuth();
